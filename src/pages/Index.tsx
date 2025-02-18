@@ -16,6 +16,7 @@ const Index = () => {
   const [content, setContent] = useState<string>("");
   const [generatedSlides, setGeneratedSlides] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   const generatePresentation = async () => {
@@ -61,6 +62,70 @@ const Index = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const downloadPresentation = async () => {
+    if (generatedSlides.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez d'abord générer une présentation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      // Convertir le thème en base64 si présent
+      let themeData = null;
+      if (theme) {
+        const buffer = await theme.arrayBuffer();
+        themeData = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      }
+
+      const { data, error } = await supabase.functions.invoke('generate-pptx', {
+        body: { 
+          slides: generatedSlides,
+          theme: themeData
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.file) {
+        // Convertir le base64 en Blob
+        const binaryString = atob(data.file);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+
+        // Créer un lien de téléchargement
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'presentation.pptx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Succès",
+          description: "Votre présentation a été téléchargée",
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors du téléchargement de la présentation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -117,14 +182,10 @@ const Index = () => {
                 <SlidePreview slides={generatedSlides} />
                 <Button 
                   className="w-full bg-green-600 hover:bg-green-700 transition-all"
-                  onClick={() => {
-                    toast({
-                      title: "Téléchargement démarré",
-                      description: "Votre présentation PowerPoint est en cours de téléchargement",
-                    });
-                  }}
+                  onClick={downloadPresentation}
+                  disabled={isDownloading}
                 >
-                  Télécharger la présentation
+                  {isDownloading ? "Téléchargement en cours..." : "Télécharger la présentation"}
                   <FileDown className="ml-2 h-4 w-4" />
                 </Button>
               </div>
