@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,11 +76,12 @@ const Index = () => {
 
     setIsDownloading(true);
     try {
-      // Convertir le thème en base64 si présent
       let themeData = null;
       if (theme) {
         const buffer = await theme.arrayBuffer();
-        themeData = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const uint8Array = new Uint8Array(buffer);
+        const binary = uint8Array.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+        themeData = btoa(binary);
       }
 
       const { data, error } = await supabase.functions.invoke('generate-pptx', {
@@ -94,23 +94,21 @@ const Index = () => {
       if (error) throw error;
 
       if (data.file) {
-        // Convertir le base64 en Blob
-        const binaryString = atob(data.file);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        const binary = atob(data.file);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
         }
-        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+        const blob = new Blob([bytes], { 
+          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+        });
 
-        // Créer un lien de téléchargement
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'presentation.pptx';
-        document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
 
         toast({
           title: "Succès",

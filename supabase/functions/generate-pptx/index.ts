@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import * as pptxgen from 'https://esm.sh/pptxgenjs@3.12.0';
 
 const corsHeaders = {
@@ -21,29 +20,68 @@ serve(async (req) => {
 
     // Apply theme if provided
     if (theme) {
-      // TODO: Apply theme settings
-      pres.theme = {
-        // Apply theme properties
-      };
+      try {
+        const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
+        // Load and apply the theme template
+        await pres.load(themeBuffer);
+      } catch (themeError) {
+        console.error('Erreur lors de l\'application du thème:', themeError);
+      }
     }
 
     // Add slides
     slides.forEach((slideContent: string, index: number) => {
       const slide = pres.addSlide();
       
-      // Add text to slide
-      slide.addText(slideContent, {
-        x: 0.5,
-        y: 0.5,
-        w: '90%',
-        h: 'auto',
-        fontSize: index === 0 ? 44 : 24, // Larger font for title slide
-        align: index === 0 ? 'center' : 'left',
-      });
+      // Add text to slide with appropriate styling
+      if (index === 0) {
+        // Title slide
+        slide.addText(slideContent, {
+          x: 0.5,
+          y: 0.3,
+          w: '90%',
+          h: 'auto',
+          fontSize: 44,
+          bold: true,
+          align: 'center',
+          color: '363636'
+        });
+      } else {
+        // Content slides
+        const lines = slideContent.split('\n');
+        if (lines.length > 0) {
+          // Add title
+          slide.addText(lines[0], {
+            x: 0.5,
+            y: 0.3,
+            w: '90%',
+            h: 'auto',
+            fontSize: 32,
+            bold: true,
+            align: 'left',
+            color: '363636'
+          });
+
+          // Add content
+          if (lines.length > 1) {
+            const content = lines.slice(1).join('\n');
+            slide.addText(content, {
+              x: 0.5,
+              y: 1.5,
+              w: '90%',
+              h: 'auto',
+              fontSize: 24,
+              align: 'left',
+              color: '363636',
+              bullet: { type: 'bullet' }
+            });
+          }
+        }
+      }
     });
 
-    // Generate PowerPoint file
-    const buffer = await pres.write('base64');
+    // Generate PowerPoint file with compression
+    const buffer = await pres.write({ outputType: 'base64' });
 
     return new Response(
       JSON.stringify({ 
