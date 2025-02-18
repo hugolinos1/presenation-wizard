@@ -8,15 +8,17 @@ import DetailLevel from "@/components/DetailLevel";
 import ThemeUploader from "@/components/ThemeUploader";
 import SlidePreview from "@/components/SlidePreview";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [detailLevel, setDetailLevel] = useState<string>("");
   const [theme, setTheme] = useState<File | null>(null);
   const [content, setContent] = useState<string>("");
   const [generatedSlides, setGeneratedSlides] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const generatePresentation = () => {
+  const generatePresentation = async () => {
     if (!detailLevel) {
       toast({
         title: "Niveau de détail requis",
@@ -35,9 +37,31 @@ const Index = () => {
       return;
     }
 
-    // Simulation de génération des slides basée sur le contenu
-    const slides = content.split('\n\n').map(paragraph => paragraph.trim());
-    setGeneratedSlides(slides);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-presentation', {
+        body: { content, detailLevel }
+      });
+
+      if (error) throw error;
+
+      if (data.slides) {
+        setGeneratedSlides(data.slides);
+        toast({
+          title: "Présentation générée",
+          description: "Votre présentation a été générée avec succès",
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la génération de la présentation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,8 +100,9 @@ const Index = () => {
               <Button 
                 onClick={generatePresentation}
                 className="w-full bg-blue-600 hover:bg-blue-700 transition-all"
+                disabled={isLoading}
               >
-                Générer la présentation
+                {isLoading ? "Génération en cours..." : "Générer la présentation"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
