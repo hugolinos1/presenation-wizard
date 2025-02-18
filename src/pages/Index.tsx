@@ -7,10 +7,12 @@ import { ArrowRight, FileDown } from "lucide-react";
 import DetailLevel from "@/components/DetailLevel";
 import ThemeUploader from "@/components/ThemeUploader";
 import SlidePreview from "@/components/SlidePreview";
+import { Textarea } from "@/components/ui/textarea";
 
 const Index = () => {
   const [detailLevel, setDetailLevel] = useState<string>("");
   const [theme, setTheme] = useState<File | null>(null);
+  const [content, setContent] = useState<string>("");
   const [generatedSlides, setGeneratedSlides] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -24,8 +26,17 @@ const Index = () => {
       return;
     }
 
-    // Simulation de génération des slides
-    const slides = ["Slide 1 content", "Slide 2 content"];
+    if (!content.trim()) {
+      toast({
+        title: "Contenu requis",
+        description: "Veuillez saisir le sujet ou le contenu de votre présentation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Simulation de génération des slides basée sur le contenu
+    const slides = content.split('\n\n').map(paragraph => paragraph.trim());
     setGeneratedSlides(slides);
   };
 
@@ -44,6 +55,21 @@ const Index = () => {
 
           <Card className="p-6 backdrop-blur-sm bg-white/80 shadow-lg">
             <div className="space-y-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Contenu de la présentation
+                </h2>
+                <Textarea 
+                  placeholder="Saisissez le sujet ou le contenu de votre présentation ici..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[200px] resize-y"
+                />
+                <p className="text-sm text-gray-500">
+                  Conseil : séparez vos idées principales par des lignes vides pour une meilleure structure
+                </p>
+              </div>
+
               <DetailLevel onSelect={setDetailLevel} selected={detailLevel} />
               <ThemeUploader onUpload={setTheme} />
               
