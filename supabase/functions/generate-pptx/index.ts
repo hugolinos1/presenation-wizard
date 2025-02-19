@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as pptxgen from 'https://esm.sh/pptxgenjs@3.12.0';
+import PptxGenJS from 'https://esm.sh/pptxgenjs@3.12.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,7 @@ serve(async (req) => {
     const { slides, theme } = await req.json();
     
     // Create a new PowerPoint presentation
-    const pres = new pptxgen();
+    const pres = new PptxGenJS();
 
     // Apply theme if provided
     if (theme) {

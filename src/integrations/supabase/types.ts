@@ -11,19 +11,22 @@ export type Database = {
     Tables: {
       api_keys: {
         Row: {
-          api_key: string | null
           created_at: string
           id: string
+          key: string | null
+          service: string | null
         }
         Insert: {
-          api_key?: string | null
           created_at?: string
           id?: string
+          key?: string | null
+          service?: string | null
         }
         Update: {
-          api_key?: string | null
           created_at?: string
           id?: string
+          key?: string | null
+          service?: string | null
         }
         Relationships: []
       }
