@@ -19,14 +19,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Récupérer la clé API de la base de données
+    // Récupérer la clé API Mistral de la table api_keys
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
-      .select('api_key')
+      .select('key')
+      .eq('service', 'mistral')
       .single();
 
-    if (apiKeyError || !apiKeyData?.api_key) {
-      throw new Error('Clé API non trouvée');
+    if (apiKeyError || !apiKeyData?.key) {
+      throw new Error('Clé API Mistral non trouvée');
     }
 
     const { content, detailLevel } = await req.json();
@@ -45,7 +46,7 @@ serve(async (req) => {
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKeyData.api_key}`,
+        'Authorization': `Bearer ${apiKeyData.key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
