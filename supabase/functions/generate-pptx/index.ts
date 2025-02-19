@@ -54,48 +54,60 @@ serve(async (req) => {
       // Split content into title and points
       const lines = slideContent.split('\n');
       const title = lines[0].replace(/^[#\s]+/, ''); // Remove any # or spaces from start
-      const content = lines.slice(1).join('\n');
+      const content = lines.slice(1);
 
       if (index === 0) {
         // Title slide
-        slide.addText(title, {
-          x: '5%',
-          y: '40%',
-          w: '90%',
-          h: 'auto',
-          fontSize: 44,
-          bold: true,
-          align: 'center',
-          color: '363636'
-        });
+        slide.addText([{ 
+          text: title,
+          options: {
+            x: '5%',
+            y: '40%',
+            w: '90%',
+            h: 'auto',
+            fontSize: 44,
+            bold: true,
+            align: 'center',
+            color: '363636'
+          }
+        }]);
       } else {
         // Content slides
         // Add title
-        slide.addText(title, {
-          x: '5%',
-          y: '5%',
-          w: '90%',
-          h: 'auto',
-          fontSize: 32,
-          bold: true,
-          color: '363636'
-        });
+        slide.addText([{
+          text: title,
+          options: {
+            x: '5%',
+            y: '5%',
+            w: '90%',
+            h: 'auto',
+            fontSize: 32,
+            bold: true,
+            color: '363636'
+          }
+        }]);
 
         // Add bullet points
-        if (content.trim()) {
+        if (content.length > 0) {
           const bulletPoints = content
-            .split('\n')
             .filter(line => line.trim())
-            .map(line => line.trim().replace(/^[-•]\s*/, '')); // Remove bullet characters
+            .map(line => line.trim().replace(/^[-•]\s*/, ''));
 
           if (bulletPoints.length > 0) {
-            slide.addText(bulletPoints, {
+            // Convert bullet points to text objects array
+            const textObjects = bulletPoints.map(point => ({
+              text: point,
+              options: {
+                bullet: true
+              }
+            }));
+
+            slide.addText(textObjects, {
               x: '5%',
               y: '25%',
               w: '90%',
               h: 'auto',
               fontSize: 24,
-              bullet: { type: 'bullet' },
               color: '363636'
             });
           }
