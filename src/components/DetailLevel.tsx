@@ -11,18 +11,18 @@ const DetailLevel = ({ onSelect, selected }: DetailLevelProps) => {
   const levels = [
     {
       id: "1",
-      title: "Très synthétique",
-      description: "Points clés et messages essentiels uniquement",
+      title: "Synthétique",
+      description: "Format court de 3 à 5 slides pour aller à l'essentiel",
     },
     {
       id: "2",
-      title: "Un peu détaillée",
-      description: "Équilibre entre synthèse et détails",
+      title: "Standard",
+      description: "Format classique de 6 à 10 slides avec un bon équilibre",
     },
     {
       id: "3",
-      title: "Très détaillée",
-      description: "Présentation exhaustive avec tous les détails",
+      title: "Détaillé",
+      description: "Format complet de 11 à 15 slides pour une présentation exhaustive",
     },
   ];
 

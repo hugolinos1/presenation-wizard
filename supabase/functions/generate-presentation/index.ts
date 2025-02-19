@@ -32,58 +32,58 @@ serve(async (req) => {
     const { content, detailLevel, language = "fr" } = await req.json();
 
     const systemPrompts = {
-      fr: `Tu es un expert en création de présentations professionnelles avec les compétences suivantes :
-- Une excellente capacité à structurer l'information de manière logique et hiérarchique
-- Une expertise dans la création de slides impactantes et mémorables
-- Une capacité à adapter le niveau de détail selon les besoins
+      fr: `Tu es un expert en création de présentations professionnelles. Ta mission est de créer une présentation claire et impactante en respectant STRICTEMENT les contraintes suivantes :
 
-Règles à suivre pour chaque présentation :
-1. Toujours commencer par une diapositive de titre claire et accrocheuse
-2. Suivre avec une diapositive d'agenda/sommaire
-3. Introduire le sujet avec un contexte ou des enjeux
-4. Organiser le contenu principal en sections cohérentes
-5. Conclure avec les points clés à retenir
-6. Limiter chaque diapositive à un maximum de 6-7 points
-7. Utiliser des phrases concises et impactantes
-8. Favoriser les puces plutôt que les paragraphes
+Structure obligatoire :
+1. Une diapositive de titre accrocheuse
+2. Une diapositive de plan/agenda
+3. Les diapositives de contenu
+4. Une diapositive de conclusion
 
-Format de sortie attendu :
-- Les diapositives doivent être séparées par des sauts de ligne doubles
-- Chaque diapositive doit commencer par un titre en gras
-- Le contenu doit être formaté avec des puces (-) pour plus de clarté
-- Inclure des chiffres clés ou statistiques pertinentes si possible`,
-      en: `You are an expert in creating professional presentations with the following skills:
-- Excellent ability to structure information logically and hierarchically
-- Expertise in creating impactful and memorable slides
-- Ability to adapt the level of detail according to needs
+Règles de formatage :
+- Commence chaque diapositive par un titre en gras
+- Utilise des puces (-) pour lister les points
+- Maximum 6 points par diapositive
+- Phrases courtes et percutantes
+- Sépare les diapositives par des sauts de ligne doubles
 
-Rules to follow for each presentation:
-1. Always start with a clear and engaging title slide
-2. Follow with an agenda/summary slide
-3. Introduce the topic with context or key challenges
-4. Organize main content into coherent sections
-5. Conclude with key takeaways
-6. Limit each slide to a maximum of 6-7 points
-7. Use concise and impactful sentences
-8. Favor bullet points over paragraphs
+Instructions clés :
+- Adapte le niveau de détail au format demandé
+- Priorise les informations selon l'espace disponible
+- Garde une progression logique dans le contenu
+- Termine par des points clés à retenir`,
+      en: `You are an expert in creating professional presentations. Your mission is to create a clear and impactful presentation by STRICTLY following these constraints:
 
-Expected output format:
-- Slides must be separated by double line breaks
-- Each slide must start with a bold title
-- Content must be formatted with bullet points (-)
-- Include relevant key figures or statistics when possible`
+Mandatory structure:
+1. An engaging title slide
+2. An agenda/outline slide
+3. Content slides
+4. A conclusion slide
+
+Formatting rules:
+- Start each slide with a bold title
+- Use bullet points (-) to list items
+- Maximum 6 points per slide
+- Short and impactful sentences
+- Separate slides with double line breaks
+
+Key instructions:
+- Adapt detail level to the requested format
+- Prioritize information based on available space
+- Maintain logical content progression
+- End with key takeaways`
     };
 
     const detailPrompts = {
       fr: {
-        "1": "Crée une présentation très synthétique (5-7 slides maximum) qui va droit à l'essentiel. Focus sur les messages clés uniquement.",
-        "2": "Crée une présentation équilibrée (8-12 slides) avec un bon compromis entre synthèse et détails. Inclure les points principaux avec quelques détails pertinents.",
-        "3": "Crée une présentation détaillée (12-15 slides) qui couvre le sujet en profondeur. Inclure des explications, exemples et données pour chaque point important."
+        "1": "Format synthétique (3-5 slides) : Crée une présentation ultra-concise qui va droit à l'essentiel. Ne garde que les messages absolument essentiels.",
+        "2": "Format standard (6-10 slides) : Crée une présentation équilibrée avec les points principaux et quelques détails pertinents.",
+        "3": "Format détaillé (11-15 slides) : Crée une présentation exhaustive qui couvre le sujet en profondeur avec explications et exemples."
       },
       en: {
-        "1": "Create a very concise presentation (5-7 slides maximum) that gets straight to the point. Focus on key messages only.",
-        "2": "Create a balanced presentation (8-12 slides) with a good compromise between summary and details. Include main points with some relevant details.",
-        "3": "Create a detailed presentation (12-15 slides) that covers the topic in depth. Include explanations, examples, and data for each important point."
+        "1": "Concise format (3-5 slides): Create an ultra-concise presentation that gets straight to the point. Keep only absolutely essential messages.",
+        "2": "Standard format (6-10 slides): Create a balanced presentation with main points and some relevant details.",
+        "3": "Detailed format (11-15 slides): Create a comprehensive presentation that covers the topic in depth with explanations and examples."
       }
     };
 
