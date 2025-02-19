@@ -21,9 +21,27 @@ serve(async (req) => {
     // Apply theme if provided
     if (theme) {
       try {
+        // Decode the base64 theme data
         const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
-        // Load and apply the theme template
-        await pres.load(themeBuffer);
+        
+        // Create a temporary presentation with the theme
+        const themePres = new PptxGenJS();
+        await themePres.load({ data: themeBuffer });
+        
+        // Apply the master slide from the theme
+        if (themePres.masters && themePres.masters.length > 0) {
+          const masterSlide = themePres.masters[0];
+          pres.defineSlideMaster({
+            title: masterSlide.title,
+            background: masterSlide.background,
+            objects: masterSlide.objects,
+            slideNumber: masterSlide.slideNumber,
+          });
+        }
+
+        // Copy theme properties
+        if (themePres.layout) pres.layout = themePres.layout;
+        if (themePres.theme) pres.theme = themePres.theme;
       } catch (themeError) {
         console.error('Erreur lors de l\'application du thème:', themeError);
       }
@@ -33,12 +51,16 @@ serve(async (req) => {
     slides.forEach((slideContent: string, index: number) => {
       const slide = pres.addSlide();
       
-      // Add text to slide with appropriate styling
+      // Split content into title and points
+      const lines = slideContent.split('\n');
+      const title = lines[0].replace(/^[#\s]+/, ''); // Remove any # or spaces from start
+      const content = lines.slice(1).join('\n');
+
       if (index === 0) {
         // Title slide
-        slide.addText(slideContent, {
-          x: 0.5,
-          y: 0.3,
+        slide.addText(title, {
+          x: '5%',
+          y: '40%',
           w: '90%',
           h: 'auto',
           fontSize: 44,
@@ -48,39 +70,40 @@ serve(async (req) => {
         });
       } else {
         // Content slides
-        const lines = slideContent.split('\n');
-        if (lines.length > 0) {
-          // Add title
-          slide.addText(lines[0], {
-            x: 0.5,
-            y: 0.3,
-            w: '90%',
-            h: 'auto',
-            fontSize: 32,
-            bold: true,
-            align: 'left',
-            color: '363636'
-          });
+        // Add title
+        slide.addText(title, {
+          x: '5%',
+          y: '5%',
+          w: '90%',
+          h: 'auto',
+          fontSize: 32,
+          bold: true,
+          color: '363636'
+        });
 
-          // Add content
-          if (lines.length > 1) {
-            const content = lines.slice(1).join('\n');
-            slide.addText(content, {
-              x: 0.5,
-              y: 1.5,
+        // Add bullet points
+        if (content.trim()) {
+          const bulletPoints = content
+            .split('\n')
+            .filter(line => line.trim())
+            .map(line => line.trim().replace(/^[-•]\s*/, '')); // Remove bullet characters
+
+          if (bulletPoints.length > 0) {
+            slide.addText(bulletPoints, {
+              x: '5%',
+              y: '25%',
               w: '90%',
               h: 'auto',
               fontSize: 24,
-              align: 'left',
-              color: '363636',
-              bullet: { type: 'bullet' }
+              bullet: { type: 'bullet' },
+              color: '363636'
             });
           }
         }
       }
     });
 
-    // Generate PowerPoint file with compression
+    // Generate PowerPoint file
     const buffer = await pres.write({ outputType: 'base64' });
 
     return new Response(
