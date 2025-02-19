@@ -19,7 +19,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Récupérer la clé API Mistral de la table api_keys
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
       .select('key')
@@ -30,10 +29,10 @@ serve(async (req) => {
       throw new Error('Clé API Mistral non trouvée');
     }
 
-    const { content, detailLevel } = await req.json();
+    const { content, detailLevel, language = "fr" } = await req.json();
 
-    // Construction d'un prompt système plus détaillé
-    const systemPrompt = `Tu es un expert en création de présentations professionnelles avec les compétences suivantes :
+    const systemPrompts = {
+      fr: `Tu es un expert en création de présentations professionnelles avec les compétences suivantes :
 - Une excellente capacité à structurer l'information de manière logique et hiérarchique
 - Une expertise dans la création de slides impactantes et mémorables
 - Une capacité à adapter le niveau de détail selon les besoins
@@ -52,23 +51,45 @@ Format de sortie attendu :
 - Les diapositives doivent être séparées par des sauts de ligne doubles
 - Chaque diapositive doit commencer par un titre en gras
 - Le contenu doit être formaté avec des puces (-) pour plus de clarté
-- Inclure des chiffres clés ou statistiques pertinentes si possible`;
+- Inclure des chiffres clés ou statistiques pertinentes si possible`,
+      en: `You are an expert in creating professional presentations with the following skills:
+- Excellent ability to structure information logically and hierarchically
+- Expertise in creating impactful and memorable slides
+- Ability to adapt the level of detail according to needs
 
-    // Adaptation du prompt utilisateur selon le niveau de détail
-    let detailPrompt = "";
-    switch(detailLevel) {
-      case "1":
-        detailPrompt = "Crée une présentation très synthétique (5-7 slides maximum) qui va droit à l'essentiel. Focus sur les messages clés uniquement.";
-        break;
-      case "2":
-        detailPrompt = "Crée une présentation équilibrée (8-12 slides) avec un bon compromis entre synthèse et détails. Inclure les points principaux avec quelques détails pertinents.";
-        break;
-      case "3":
-        detailPrompt = "Crée une présentation détaillée (12-15 slides) qui couvre le sujet en profondeur. Inclure des explications, exemples et données pour chaque point important.";
-        break;
-    }
+Rules to follow for each presentation:
+1. Always start with a clear and engaging title slide
+2. Follow with an agenda/summary slide
+3. Introduce the topic with context or key challenges
+4. Organize main content into coherent sections
+5. Conclude with key takeaways
+6. Limit each slide to a maximum of 6-7 points
+7. Use concise and impactful sentences
+8. Favor bullet points over paragraphs
 
-    // Appel à l'API Mistral avec les prompts améliorés
+Expected output format:
+- Slides must be separated by double line breaks
+- Each slide must start with a bold title
+- Content must be formatted with bullet points (-)
+- Include relevant key figures or statistics when possible`
+    };
+
+    const detailPrompts = {
+      fr: {
+        "1": "Crée une présentation très synthétique (5-7 slides maximum) qui va droit à l'essentiel. Focus sur les messages clés uniquement.",
+        "2": "Crée une présentation équilibrée (8-12 slides) avec un bon compromis entre synthèse et détails. Inclure les points principaux avec quelques détails pertinents.",
+        "3": "Crée une présentation détaillée (12-15 slides) qui couvre le sujet en profondeur. Inclure des explications, exemples et données pour chaque point important."
+      },
+      en: {
+        "1": "Create a very concise presentation (5-7 slides maximum) that gets straight to the point. Focus on key messages only.",
+        "2": "Create a balanced presentation (8-12 slides) with a good compromise between summary and details. Include main points with some relevant details.",
+        "3": "Create a detailed presentation (12-15 slides) that covers the topic in depth. Include explanations, examples, and data for each important point."
+      }
+    };
+
+    const systemPrompt = systemPrompts[language];
+    const detailPrompt = detailPrompts[language][detailLevel];
+
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -79,7 +100,7 @@ Format de sortie attendu :
         model: "mistral-medium",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `${detailPrompt}\n\nSujet de la présentation : ${content}` }
+          { role: "user", content: `${detailPrompt}\n\n${language === "fr" ? "Sujet de la présentation" : "Presentation topic"} : ${content}` }
         ],
         temperature: 0.7,
       }),

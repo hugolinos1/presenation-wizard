@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import DetailLevel from "@/components/DetailLevel";
 import ThemeUploader from "@/components/ThemeUploader";
 import SlidePreview from "@/components/SlidePreview";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -16,6 +19,7 @@ const Index = () => {
   const [generatedSlides, setGeneratedSlides] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [language, setLanguage] = useState<"fr" | "en">("fr");
   const { toast } = useToast();
 
   const generatePresentation = async () => {
@@ -40,7 +44,7 @@ const Index = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-presentation', {
-        body: { content, detailLevel }
+        body: { content, detailLevel, language }
       });
 
       if (error) throw error;
@@ -87,7 +91,8 @@ const Index = () => {
       const { data, error } = await supabase.functions.invoke('generate-pptx', {
         body: { 
           slides: generatedSlides,
-          theme: themeData
+          theme: themeData,
+          themeFileName: theme?.name
         }
       });
 
@@ -155,6 +160,26 @@ const Index = () => {
                 <p className="text-sm text-gray-500">
                   Conseil : séparez vos idées principales par des lignes vides pour une meilleure structure
                 </p>
+              </div>
+
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Langue de la présentation
+                </h2>
+                <RadioGroup 
+                  value={language} 
+                  onValueChange={(value: "fr" | "en") => setLanguage(value)}
+                  className="flex space-x-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fr" id="fr" />
+                    <Label htmlFor="fr">Français</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="en" id="en" />
+                    <Label htmlFor="en">English</Label>
+                  </div>
+                </RadioGroup>
               </div>
 
               <DetailLevel onSelect={setDetailLevel} selected={detailLevel} />
