@@ -32,17 +32,43 @@ serve(async (req) => {
 
     const { content, detailLevel } = await req.json();
 
-    // Construction du prompt en fonction du niveau de détail
-    let systemPrompt = "Tu es un expert en création de présentations professionnelles. ";
-    if (detailLevel === "concis") {
-      systemPrompt += "Crée une présentation concise avec les points essentiels uniquement.";
-    } else if (detailLevel === "detaille") {
-      systemPrompt += "Crée une présentation détaillée avec des explications approfondies.";
-    } else {
-      systemPrompt += "Crée une présentation équilibrée avec un niveau de détail modéré.";
+    // Construction d'un prompt système plus détaillé
+    const systemPrompt = `Tu es un expert en création de présentations professionnelles avec les compétences suivantes :
+- Une excellente capacité à structurer l'information de manière logique et hiérarchique
+- Une expertise dans la création de slides impactantes et mémorables
+- Une capacité à adapter le niveau de détail selon les besoins
+
+Règles à suivre pour chaque présentation :
+1. Toujours commencer par une diapositive de titre claire et accrocheuse
+2. Suivre avec une diapositive d'agenda/sommaire
+3. Introduire le sujet avec un contexte ou des enjeux
+4. Organiser le contenu principal en sections cohérentes
+5. Conclure avec les points clés à retenir
+6. Limiter chaque diapositive à un maximum de 6-7 points
+7. Utiliser des phrases concises et impactantes
+8. Favoriser les puces plutôt que les paragraphes
+
+Format de sortie attendu :
+- Les diapositives doivent être séparées par des sauts de ligne doubles
+- Chaque diapositive doit commencer par un titre en gras
+- Le contenu doit être formaté avec des puces (-) pour plus de clarté
+- Inclure des chiffres clés ou statistiques pertinentes si possible`;
+
+    // Adaptation du prompt utilisateur selon le niveau de détail
+    let detailPrompt = "";
+    switch(detailLevel) {
+      case "1":
+        detailPrompt = "Crée une présentation très synthétique (5-7 slides maximum) qui va droit à l'essentiel. Focus sur les messages clés uniquement.";
+        break;
+      case "2":
+        detailPrompt = "Crée une présentation équilibrée (8-12 slides) avec un bon compromis entre synthèse et détails. Inclure les points principaux avec quelques détails pertinents.";
+        break;
+      case "3":
+        detailPrompt = "Crée une présentation détaillée (12-15 slides) qui couvre le sujet en profondeur. Inclure des explications, exemples et données pour chaque point important.";
+        break;
     }
 
-    // Appel à l'API Mistral
+    // Appel à l'API Mistral avec les prompts améliorés
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -53,9 +79,7 @@ serve(async (req) => {
         model: "mistral-medium",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Génère une présentation PowerPoint sur le sujet suivant: ${content}. 
-            Format attendu: Une liste de textes séparés par des sauts de ligne doubles, chaque texte représentant une diapositive.
-            Commence par une diapositive de titre, puis une introduction, le contenu principal, et une conclusion.` }
+          { role: "user", content: `${detailPrompt}\n\nSujet de la présentation : ${content}` }
         ],
         temperature: 0.7,
       }),
