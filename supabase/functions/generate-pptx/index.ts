@@ -14,71 +14,86 @@ serve(async (req) => {
 
   try {
     const { slides, theme, themeFileName } = await req.json();
-    console.log('Thème reçu:', !!theme);
+    console.log('Début de la génération de la présentation');
+    console.log('Thème présent:', !!theme);
     console.log('Nom du fichier thème:', themeFileName);
     
-    // Create a new PowerPoint presentation
-    const pres = new PptxGenJS();
+    let pres = new PptxGenJS();
+    let masterPres;
 
-    // Apply theme if provided
+    // Si un thème est fourni, on l'applique d'abord
     if (theme) {
       try {
-        console.log('Application du thème...');
+        console.log('Décodage et application du thème...');
         const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
         
-        // Load theme directly into the main presentation
-        await pres.load({ 
-          data: themeBuffer,
-          fileName: themeFileName 
+        // Création d'une présentation temporaire pour extraire le thème
+        masterPres = new PptxGenJS();
+        await masterPres.load({ 
+          data: themeBuffer
         });
-        console.log('Thème chargé avec succès');
+        console.log('Thème chargé dans la présentation temporaire');
+
+        // Copie des propriétés du thème
+        if (masterPres.masters && masterPres.masters.length > 0) {
+          console.log('Masters trouvés dans le thème:', masterPres.masters.length);
+          masterPres.masters.forEach((master, idx) => {
+            console.log(`Copie du master ${idx + 1}`);
+            pres.defineSlideMaster({
+              title: master.title || `Master_${idx}`,
+              background: master.background,
+              objects: master.objects,
+              slideNumber: master.slideNumber
+            });
+          });
+        }
+
+        // Copie des layouts
+        if (masterPres.layout) {
+          console.log('Copie du layout du thème');
+          pres.layout = masterPres.layout;
+        }
+
+        // Copie des couleurs et autres propriétés du thème
+        if (masterPres.theme) {
+          console.log('Copie des propriétés du thème');
+          pres.theme = masterPres.theme;
+        }
+
+        console.log('Thème appliqué avec succès');
       } catch (themeError) {
         console.error('Erreur lors de l\'application du thème:', themeError);
       }
     }
 
-    // Add slides
+    // Ajout des slides
     slides.forEach((slideContent: string, index: number) => {
-      const slide = pres.addSlide();
+      console.log(`Création de la slide ${index + 1}`);
+      // Si on a des masters, on utilise le premier pour la slide de titre
+      const slide = index === 0 && pres.masters && pres.masters.length > 0
+        ? pres.addSlide({ masterName: pres.masters[0].title })
+        : pres.addSlide();
       
-      // Split content into title and points
       const lines = slideContent.split('\n');
       const title = lines[0].replace(/^[#\s]+/, '');
       const content = lines.slice(1);
 
       if (index === 0) {
-        // Title slide - using master if available
-        if (pres.masters && pres.masters.length > 0) {
-          slide.addText([{ 
-            text: title,
-            options: {
-              x: '5%',
-              y: '40%',
-              w: '90%',
-              h: 'auto',
-              fontSize: 44,
-              bold: true,
-              align: 'center'
-            }
-          }]);
-        } else {
-          // Fallback if no master
-          slide.addText([{ 
-            text: title,
-            options: {
-              x: '5%',
-              y: '40%',
-              w: '90%',
-              h: 'auto',
-              fontSize: 44,
-              bold: true,
-              align: 'center',
-              color: '363636'
-            }
-          }]);
-        }
+        // Slide de titre
+        slide.addText([{ 
+          text: title,
+          options: {
+            x: '5%',
+            y: '40%',
+            w: '90%',
+            h: 'auto',
+            fontSize: 44,
+            bold: true,
+            align: 'center'
+          }
+        }]);
       } else {
-        // Content slides
+        // Slides de contenu
         slide.addText([{
           text: title,
           options: {
@@ -107,17 +122,16 @@ serve(async (req) => {
               y: '25%',
               w: '90%',
               h: 'auto',
-              fontSize: 24,
-              color: theme ? undefined : '363636' // Use theme colors if theme is provided
+              fontSize: 24
             });
           }
         }
       }
     });
 
-    console.log('Génération du fichier PowerPoint...');
+    console.log('Génération du buffer PowerPoint...');
     const buffer = await pres.write({ outputType: 'base64' });
-    console.log('Fichier PowerPoint généré avec succès');
+    console.log('Présentation générée avec succès');
 
     return new Response(
       JSON.stringify({ 
