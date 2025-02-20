@@ -30,65 +30,64 @@ serve(async (req) => {
     }
 
     const { content, detailLevel, language = "fr" } = await req.json();
+    console.log('Langue reçue:', language);
+    console.log('Niveau de détail reçu:', detailLevel);
 
     const systemPrompts = {
-      fr: `Tu es un expert en création de présentations professionnelles. Ta mission est de créer une présentation claire et impactante en respectant STRICTEMENT les contraintes suivantes :
+      fr: `Tu es un expert en création de présentations PowerPoint professionnelles.
+ATTENTION : Tu dois ABSOLUMENT respecter le nombre de slides demandé, c'est une contrainte OBLIGATOIRE.
 
-Structure obligatoire :
-1. Une diapositive de titre accrocheuse
-2. Une diapositive de plan/agenda
-3. Les diapositives de contenu
-4. Une diapositive de conclusion
+Structure OBLIGATOIRE de la présentation :
+1. Une slide de titre (compte comme 1 slide)
+2. Une slide de plan/agenda (compte comme 1 slide)
+3. Les slides de contenu
+4. Une slide de conclusion (compte comme 1 slide)
 
-Règles de formatage :
-- Commence chaque diapositive par un titre en gras
-- Utilise des puces (-) pour lister les points
-- Maximum 6 points par diapositive
-- Phrases courtes et percutantes
-- Sépare les diapositives par des sauts de ligne doubles
+Format du contenu :
+- Chaque slide doit commencer par un titre clair
+- Les points doivent être listés avec des tirets (-)
+- Maximum 6 points par slide
+- Phrases courtes et impactantes
+- TOUJOURS séparer les slides par des doubles sauts de ligne
 
-Instructions clés :
-- Adapte le niveau de détail au format demandé
-- Priorise les informations selon l'espace disponible
-- Garde une progression logique dans le contenu
-- Termine par des points clés à retenir`,
-      en: `You are an expert in creating professional presentations. Your mission is to create a clear and impactful presentation by STRICTLY following these constraints:
+La présentation doit être en FRANÇAIS.`,
+      en: `You are an expert in creating professional PowerPoint presentations.
+WARNING: You MUST STRICTLY follow the requested number of slides, this is a MANDATORY constraint.
 
-Mandatory structure:
-1. An engaging title slide
-2. An agenda/outline slide
+MANDATORY presentation structure:
+1. Title slide (counts as 1 slide)
+2. Agenda/outline slide (counts as 1 slide)
 3. Content slides
-4. A conclusion slide
+4. Conclusion slide (counts as 1 slide)
 
-Formatting rules:
-- Start each slide with a bold title
-- Use bullet points (-) to list items
+Content format:
+- Each slide must start with a clear title
+- Points must be listed with dashes (-)
 - Maximum 6 points per slide
 - Short and impactful sentences
-- Separate slides with double line breaks
+- ALWAYS separate slides with double line breaks
 
-Key instructions:
-- Adapt detail level to the requested format
-- Prioritize information based on available space
-- Maintain logical content progression
-- End with key takeaways`
+The presentation must be in ENGLISH.`
     };
 
     const detailPrompts = {
       fr: {
-        "1": "Format synthétique (3-5 slides) : Crée une présentation ultra-concise qui va droit à l'essentiel. Ne garde que les messages absolument essentiels.",
-        "2": "Format standard (6-10 slides) : Crée une présentation équilibrée avec les points principaux et quelques détails pertinents.",
-        "3": "Format détaillé (11-15 slides) : Crée une présentation exhaustive qui couvre le sujet en profondeur avec explications et exemples."
+        "1": "CONTRAINTE STRICTE : La présentation doit faire exactement entre 3 et 5 slides AU TOTAL (en comptant le titre, le plan et la conclusion). Crée une présentation ultra-concise qui va droit à l'essentiel.",
+        "2": "CONTRAINTE STRICTE : La présentation doit faire exactement entre 6 et 10 slides AU TOTAL (en comptant le titre, le plan et la conclusion). Crée une présentation équilibrée avec les points principaux.",
+        "3": "CONTRAINTE STRICTE : La présentation doit faire exactement entre 11 et 15 slides AU TOTAL (en comptant le titre, le plan et la conclusion). Crée une présentation détaillée avec explications et exemples."
       },
       en: {
-        "1": "Concise format (3-5 slides): Create an ultra-concise presentation that gets straight to the point. Keep only absolutely essential messages.",
-        "2": "Standard format (6-10 slides): Create a balanced presentation with main points and some relevant details.",
-        "3": "Detailed format (11-15 slides): Create a comprehensive presentation that covers the topic in depth with explanations and examples."
+        "1": "STRICT CONSTRAINT: The presentation must be exactly between 3 and 5 slides IN TOTAL (including title, agenda and conclusion). Create an ultra-concise presentation that gets straight to the point.",
+        "2": "STRICT CONSTRAINT: The presentation must be exactly between 6 and 10 slides IN TOTAL (including title, agenda and conclusion). Create a balanced presentation with main points.",
+        "3": "STRICT CONSTRAINT: The presentation must be exactly between 11 and 15 slides IN TOTAL (including title, agenda and conclusion). Create a detailed presentation with explanations and examples."
       }
     };
 
     const systemPrompt = systemPrompts[language];
     const detailPrompt = detailPrompts[language][detailLevel];
+
+    console.log('Prompt système utilisé:', systemPrompt);
+    console.log('Prompt de détail utilisé:', detailPrompt);
 
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
@@ -100,7 +99,10 @@ Key instructions:
         model: "mistral-medium",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `${detailPrompt}\n\n${language === "fr" ? "Sujet de la présentation" : "Presentation topic"} : ${content}` }
+          { 
+            role: "user", 
+            content: `${detailPrompt}\n\nSujet à traiter : ${content}\n\nRAPPEL : La présentation DOIT être en ${language === 'fr' ? 'FRANÇAIS' : 'ANGLAIS'} et respecter STRICTEMENT le nombre de slides demandé.`
+          }
         ],
         temperature: 0.7,
       }),

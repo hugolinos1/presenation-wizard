@@ -13,7 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const { slides, theme } = await req.json();
+    const { slides, theme, themeFileName } = await req.json();
+    console.log('Thème reçu:', !!theme);
+    console.log('Nom du fichier thème:', themeFileName);
     
     // Create a new PowerPoint presentation
     const pres = new PptxGenJS();
@@ -21,27 +23,15 @@ serve(async (req) => {
     // Apply theme if provided
     if (theme) {
       try {
-        // Decode the base64 theme data
+        console.log('Application du thème...');
         const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
         
-        // Create a temporary presentation with the theme
-        const themePres = new PptxGenJS();
-        await themePres.load({ data: themeBuffer });
-        
-        // Apply the master slide from the theme
-        if (themePres.masters && themePres.masters.length > 0) {
-          const masterSlide = themePres.masters[0];
-          pres.defineSlideMaster({
-            title: masterSlide.title,
-            background: masterSlide.background,
-            objects: masterSlide.objects,
-            slideNumber: masterSlide.slideNumber,
-          });
-        }
-
-        // Copy theme properties
-        if (themePres.layout) pres.layout = themePres.layout;
-        if (themePres.theme) pres.theme = themePres.theme;
+        // Load theme directly into the main presentation
+        await pres.load({ 
+          data: themeBuffer,
+          fileName: themeFileName 
+        });
+        console.log('Thème chargé avec succès');
       } catch (themeError) {
         console.error('Erreur lors de l\'application du thème:', themeError);
       }
@@ -53,27 +43,42 @@ serve(async (req) => {
       
       // Split content into title and points
       const lines = slideContent.split('\n');
-      const title = lines[0].replace(/^[#\s]+/, ''); // Remove any # or spaces from start
+      const title = lines[0].replace(/^[#\s]+/, '');
       const content = lines.slice(1);
 
       if (index === 0) {
-        // Title slide
-        slide.addText([{ 
-          text: title,
-          options: {
-            x: '5%',
-            y: '40%',
-            w: '90%',
-            h: 'auto',
-            fontSize: 44,
-            bold: true,
-            align: 'center',
-            color: '363636'
-          }
-        }]);
+        // Title slide - using master if available
+        if (pres.masters && pres.masters.length > 0) {
+          slide.addText([{ 
+            text: title,
+            options: {
+              x: '5%',
+              y: '40%',
+              w: '90%',
+              h: 'auto',
+              fontSize: 44,
+              bold: true,
+              align: 'center'
+            }
+          }]);
+        } else {
+          // Fallback if no master
+          slide.addText([{ 
+            text: title,
+            options: {
+              x: '5%',
+              y: '40%',
+              w: '90%',
+              h: 'auto',
+              fontSize: 44,
+              bold: true,
+              align: 'center',
+              color: '363636'
+            }
+          }]);
+        }
       } else {
         // Content slides
-        // Add title
         slide.addText([{
           text: title,
           options: {
@@ -82,24 +87,19 @@ serve(async (req) => {
             w: '90%',
             h: 'auto',
             fontSize: 32,
-            bold: true,
-            color: '363636'
+            bold: true
           }
         }]);
 
-        // Add bullet points
         if (content.length > 0) {
           const bulletPoints = content
             .filter(line => line.trim())
             .map(line => line.trim().replace(/^[-•]\s*/, ''));
 
           if (bulletPoints.length > 0) {
-            // Convert bullet points to text objects array
             const textObjects = bulletPoints.map(point => ({
               text: point,
-              options: {
-                bullet: true
-              }
+              options: { bullet: true }
             }));
 
             slide.addText(textObjects, {
@@ -108,15 +108,16 @@ serve(async (req) => {
               w: '90%',
               h: 'auto',
               fontSize: 24,
-              color: '363636'
+              color: theme ? undefined : '363636' // Use theme colors if theme is provided
             });
           }
         }
       }
     });
 
-    // Generate PowerPoint file
+    console.log('Génération du fichier PowerPoint...');
     const buffer = await pres.write({ outputType: 'base64' });
+    console.log('Fichier PowerPoint généré avec succès');
 
     return new Response(
       JSON.stringify({ 
