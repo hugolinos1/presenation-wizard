@@ -13,17 +13,35 @@ serve(async (req) => {
   }
 
   try {
-    const { slides, theme, themeFileName } = await req.json();
+    const { slides, theme } = await req.json();
     console.log('Début de la génération de présentation');
-    
-    const pres = new PptxGenJS();
 
-    // Ajout des slides
+    // Création de la présentation
+    let pres = new PptxGenJS();
+
+    // Tentative d'application du thème d'abord
+    if (theme) {
+      try {
+        console.log('Application du thème...');
+        const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
+        const themePres = new PptxGenJS();
+        await themePres.load({ data: themeBuffer });
+        
+        // Copie des propriétés du thème
+        if (themePres.theme) {
+          pres.theme = themePres.theme;
+          console.log('Thème appliqué avec succès');
+        }
+      } catch (themeError) {
+        console.error('Erreur lors de l\'application du thème:', themeError);
+      }
+    }
+
+    // Génération des slides
     slides.forEach((slideContent: string, index: number) => {
       console.log(`Création de la slide ${index + 1}`);
       const slide = pres.addSlide();
       
-      // Traitement du contenu
       const lines = slideContent.split('\n');
       const title = lines[0].replace(/^[#\s]+/, '');
       const content = lines.slice(1);
@@ -69,20 +87,9 @@ serve(async (req) => {
       }
     });
 
-    // Application du thème si fourni
-    if (theme) {
-      try {
-        console.log('Application du thème...');
-        const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
-        await pres.load({ data: themeBuffer });
-        console.log('Thème appliqué avec succès');
-      } catch (themeError) {
-        console.error('Erreur lors de l\'application du thème:', themeError);
-      }
-    }
-
+    // Génération du fichier PowerPoint
     console.log('Génération du fichier PowerPoint...');
-    const buffer = await pres.write({ outputType: 'base64' });
+    const buffer = await pres.write('base64');
     console.log('Présentation générée avec succès');
 
     return new Response(
@@ -101,7 +108,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Erreur lors de la génération du PPTX:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

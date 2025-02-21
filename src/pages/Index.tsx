@@ -80,40 +80,45 @@ const Index = () => {
 
     setIsDownloading(true);
     try {
+      // Préparation du thème
       let themeData = null;
       if (theme) {
         const buffer = await theme.arrayBuffer();
-        const uint8Array = new Uint8Array(buffer);
-        const binary = uint8Array.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+        const bytes = new Uint8Array(buffer);
+        const binary = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
         themeData = btoa(binary);
       }
 
+      // Appel à la fonction de génération
       const { data, error } = await supabase.functions.invoke('generate-pptx', {
         body: { 
           slides: generatedSlides,
-          theme: themeData,
-          themeFileName: theme?.name
+          theme: themeData
         }
       });
 
       if (error) throw error;
 
       if (data.file) {
-        const binary = atob(data.file);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-          bytes[i] = binary.charCodeAt(i);
+        // Conversion du base64 en blob
+        const binaryString = atob(data.file);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
         }
         const blob = new Blob([bytes], { 
           type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
         });
 
-        const url = window.URL.createObjectURL(blob);
+        // Création et déclenchement du lien de téléchargement
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'presentation.pptx';
+        document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
         toast({
           title: "Succès",
