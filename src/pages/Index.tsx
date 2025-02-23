@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,8 +84,7 @@ const Index = () => {
       if (theme) {
         const buffer = await theme.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        const binary = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
-        themeData = btoa(binary);
+        themeData = btoa(String.fromCharCode.apply(null, [...bytes]));
       }
 
       // Appel à la fonction de génération
@@ -97,36 +95,46 @@ const Index = () => {
         }
       });
 
-      if (error) throw error;
-
-      if (data.file) {
-        // Conversion du base64 en blob
-        const binaryString = atob(data.file);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { 
-          type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
-        });
-
-        // Création et déclenchement du lien de téléchargement
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'presentation.pptx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        toast({
-          title: "Succès",
-          description: "Votre présentation a été téléchargée",
-        });
+      if (error) {
+        console.error('Erreur Supabase:', error);
+        throw error;
       }
+
+      if (!data?.file) {
+        throw new Error('Aucun fichier généré');
+      }
+
+      // Conversion du base64 en Blob
+      const binaryString = atob(data.file);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      });
+
+      // Téléchargement du fichier
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'presentation.pptx';
+      
+      // Ajout temporaire au DOM et clic
+      document.body.appendChild(link);
+      link.click();
+      
+      // Nettoyage
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Succès",
+        description: "Votre présentation a été téléchargée",
+      });
     } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
+      console.error('Erreur détaillée:', error);
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors du téléchargement de la présentation",

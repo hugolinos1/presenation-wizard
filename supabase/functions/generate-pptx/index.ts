@@ -17,27 +17,9 @@ serve(async (req) => {
     console.log('Début de la génération de présentation');
 
     // Création de la présentation
-    let pres = new PptxGenJS();
+    const pres = new PptxGenJS();
 
-    // Tentative d'application du thème d'abord
-    if (theme) {
-      try {
-        console.log('Application du thème...');
-        const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
-        const themePres = new PptxGenJS();
-        await themePres.load({ data: themeBuffer });
-        
-        // Copie des propriétés du thème
-        if (themePres.theme) {
-          pres.theme = themePres.theme;
-          console.log('Thème appliqué avec succès');
-        }
-      } catch (themeError) {
-        console.error('Erreur lors de l\'application du thème:', themeError);
-      }
-    }
-
-    // Génération des slides
+    // Ajout des slides
     slides.forEach((slideContent: string, index: number) => {
       console.log(`Création de la slide ${index + 1}`);
       const slide = pres.addSlide();
@@ -87,14 +69,33 @@ serve(async (req) => {
       }
     });
 
+    // Application du thème si fourni
+    if (theme) {
+      try {
+        console.log('Application du thème...');
+        const themeBuffer = Uint8Array.from(atob(theme), c => c.charCodeAt(0));
+        const themePres = new PptxGenJS();
+        await themePres.load({ data: themeBuffer });
+        pres.theme = themePres.theme || {};
+      } catch (themeError) {
+        console.error('Erreur lors de l\'application du thème:', themeError);
+      }
+    }
+
     // Génération du fichier PowerPoint
-    console.log('Génération du fichier PowerPoint...');
-    const buffer = await pres.write('base64');
+    console.log('Génération du buffer...');
+    const buffer = await pres.write('arraybuffer');
+    console.log('Buffer généré, conversion en base64...');
+    
+    // Conversion du buffer en base64
+    const uint8Array = new Uint8Array(buffer);
+    const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
+    
     console.log('Présentation générée avec succès');
 
     return new Response(
       JSON.stringify({ 
-        file: buffer,
+        file: base64String,
         message: 'Présentation générée avec succès'
       }),
       { 
@@ -110,7 +111,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: error.stack 
+        stack: error.stack 
       }),
       { 
         status: 500,
